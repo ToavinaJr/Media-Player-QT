@@ -24,7 +24,6 @@ MediaPlayer::MediaPlayer(QWidget *parent)
     player->setVideoOutput(videoWidget);
 
     // Initialisation de l'interface
-    createTitleBar();
     createControlArea();
 
     // Layout principal
@@ -108,43 +107,6 @@ void MediaPlayer::connectSignalsSlots() {
     });
 }
 
-void MediaPlayer::createTitleBar() {
-    titleBar = new QWidget(this);
-    titleBar->setObjectName("titleBar");
-    QHBoxLayout *layout = new QHBoxLayout(titleBar);
-    layout->setContentsMargins(5, 2, 5, 2);
-
-    QLabel *title = new QLabel("Media Player");
-    QPushButton *btnMin = new QPushButton("−");
-    QPushButton *btnMax = new QPushButton("□");
-    QPushButton *btnClose = new QPushButton("×");
-
-    // Style des boutons
-    QString btnStyle = "QPushButton {"
-                       "background: transparent;"
-                       "color: white;"
-                       "padding: 3px 8px;"
-                       "border-radius: 4px;"
-                       "}"
-                       "QPushButton:hover { background: rgba(255,255,255,0.2); }";
-
-    btnMin->setStyleSheet(btnStyle);
-    btnMax->setStyleSheet(btnStyle);
-    btnClose->setStyleSheet(btnStyle + "color: #ff5555;");
-
-    layout->addWidget(title);
-    layout->addStretch();
-    layout->addWidget(btnMin);
-    layout->addWidget(btnMax);
-    layout->addWidget(btnClose);
-
-    connect(btnMin, &QPushButton::clicked, this, &QMainWindow::showMinimized);
-    connect(btnMax, &QPushButton::clicked, this, &MediaPlayer::toggleMaximized);
-    connect(btnClose, &QPushButton::clicked, this, &QMainWindow::close);
-
-    setMenuWidget(titleBar);
-}
-
 void MediaPlayer::loadStyle() {
     setStyleSheet(R"(
         QMainWindow {
@@ -188,6 +150,23 @@ bool MediaPlayer::eventFilter(QObject *obj, QEvent *event) {
 
         timeSlider->setValue(newPosition);
         player->setPosition(newPosition);
+
+        return true;
+    }
+
+    // Gestion du clic sur le slider de volume
+    if (obj == volumeSlider && event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+
+        int newVolume = QStyle::sliderValueFromPosition(
+            volumeSlider->minimum(),
+            volumeSlider->maximum(),
+            mouseEvent->position().toPoint().x(),
+            volumeSlider->width()
+            );
+
+        volumeSlider->setValue(newVolume);
+        setVolume(newVolume);
 
         return true;
     }
@@ -248,7 +227,16 @@ void MediaPlayer::togglePlayPause() {
 }
 
 void MediaPlayer::setVolume(int volume) {
+    // Limiter la valeur entre 0 et 100
+    volume = qBound(0, volume, 100);
+
+    // Mettre à jour le volume
     audioOutput->setVolume(volume / 100.0f);
+
+    // Optionnel : feedback visuel
+    volumeSlider->blockSignals(true);
+    volumeSlider->setValue(volume);
+    volumeSlider->blockSignals(false);
 }
 
 void MediaPlayer::updateDuration(qint64 duration) {

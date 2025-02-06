@@ -46,7 +46,6 @@ private:
     bool sliderIsPressed;
 
     // Méthodes privées
-    void createTitleBar();
     void createControlArea();
     void connectSignalsSlots();
     void loadStyle();
